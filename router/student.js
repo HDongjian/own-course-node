@@ -7,7 +7,7 @@ router.get('/api/student/list', async (ctx, next) => {
   let { userId } = ctx.state || {};
   let data = Utils.filter(ctx.request.query, ['status', 'companyId'])
   let { status, companyId } = data
-  let sql = 'SELECT * FROM student WHERE isDelect=0 and userId=' + userId;
+  let sql = 'SELECT * FROM student WHERE isDelect=0 and userId=' + userId + ' order by updateTime desc';
   if (companyId) {
     sql += ' and companyId=' + companyId
   }
@@ -59,8 +59,8 @@ router.post('/api/student/add', async (ctx, next) => {
   let { userId } = ctx.state || {};
   let { studentName, subjectIds, companyId, targetScore = '', currentScore = '', gradeList = '', perHourPay, description = '' } = data
   const sql = 'SELECT * FROM student WHERE isDelect=0 and studentName=' + JSON.stringify(data.studentName);
-  const sqlAdd = 'INSERT INTO student (studentName, subjectIds,companyId,targetScore,currentScore,gradeList,perHourPay, createTime, updateTime,isDelect,userId,description,status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)';
-  const sqlData = [studentName, subjectIds, companyId, targetScore, currentScore, gradeList, perHourPay, now, now, 0, userId, description, '1'];
+  const sqlAdd = 'INSERT INTO student (studentName, subjectIds,companyId,targetScore,currentScore,gradeList,perHourPay, createTime, updateTime,isDelect,userId,description,status,password,roleId) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
+  const sqlData = [studentName, subjectIds, companyId, targetScore, currentScore, gradeList, perHourPay, now, now, 0, userId, description, '1','e10adc3949ba59abbe56e057f20f883e',3];
   let result = await db(sql).then(res => { return res })
   if (result.length == 0) {
     await db(sqlAdd, sqlData).then(() => {
