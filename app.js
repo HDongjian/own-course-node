@@ -27,9 +27,9 @@ const fnApp = function (config) {
         let token = header.token || query.token;
         if (token) {
             let result = Utils.verifyToken(token);
-            let { userId } = result;
-            if (userId) {
-                ctx.state = { userId };
+            let { userId,studentId } = result;
+            if (userId||studentId) {
+                ctx.state = result;
                 await next();
             } else {
                 return Utils.handleMessage(ctx, Tips[3001])

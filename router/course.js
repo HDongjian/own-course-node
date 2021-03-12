@@ -32,6 +32,35 @@ router.get('/api/course/list', async (ctx, next) => {
   });
 })
 
+router.get('/api/course/student', async (ctx, next) => {
+  let { studentId } = ctx.state || {};
+  let data = Utils.filter(ctx.request.query, ['teacherId', 'startTime', 'endTime', 'subjectId', 'companyId'])
+  let { startTime,teacherId, endTime, subjectId, companyId } = data
+  let sql = 'select course.studentId,course.userId, course.courseId, course.subjectId, course.unitPrice, course.startTime, course.endTime, student.companyId FROM course inner join student on course.studentId = student.studentId where course.isDelect=0 and course.studentId=' + studentId
+  if (teacherId) {
+    sql += ' and course.userId=' + teacherId
+  }
+  if (companyId) {
+    sql += ' and student.companyId=' + companyId
+  }
+  if (startTime) {
+    sql += " and course.startTime>='" + startTime + "'"
+  }
+  if (endTime) {
+    sql += " and course.endTime<='" + endTime + "'"
+  }
+  if (subjectId) {
+    sql += ' and course.subjectId=' + subjectId
+  }
+  await db(sql).then(res => {
+    Utils.handleMessage(ctx, {
+      ...Tips[1000], data: res
+    })
+  }).catch(e => {
+    Utils.handleMessage(ctx, Tips[2000], e)
+  });
+})
+
 router.get('/api/course/page', async (ctx, next) => {
   let { userId } = ctx.state || {};
   let data = Utils.filter(ctx.request.query, ['pageSize', 'pageNum', 'studentId', 'startTime', 'endTime', 'companyId', 'subjectId'])

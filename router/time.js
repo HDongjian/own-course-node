@@ -28,7 +28,6 @@ router.post('/api/time/add', async (ctx, next) => {
   }).catch((e) => {
     Utils.handleMessage(ctx, Tips[2000], e)
   });
-
 })
 
 router.post('/api/time/update/:id', async (ctx, next) => {

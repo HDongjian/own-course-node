@@ -12,27 +12,36 @@ router.post('/api/login', async (ctx, next) => {
   ]);
   if (!res) return ctx.body = Utils.handleMessage(ctx, Tips[2002])
   let { userName, password } = data;
-  let sql = 'SELECT userName,roleId,avatar,name,mobile,email,gender,userId FROM user WHERE userName=? and password=? and isDelect=0', value = [userName, password];
-  await db(sql, value).then(res => {
-    if (res && res.length > 0) {
-      let val = res[0];
-      let userId = val['userId'];
-      let token = Utils.generateToken({ userId });
-      Utils.handleMessage(ctx, {
-        ...Tips[1004], data: { token, ...val }
-      })
-    } else {
-      Utils.handleMessage(ctx, Tips[1100])
-    }
-  }).catch(e => {
+  let sql = 'SELECT userName,roleId,avatar,name,mobile,email,gender,userId FROM user WHERE userName=? and password=? and isDelect=0', userValue = [userName, password];
+  let studentSql = 'SELECT studentName,studentId,roleId,subjectIds,companyId,targetScore,currentScore,gradeList,description,userId FROM student WHERE studentName=? and password=? and isDelect=0', studentValue = [userName, password];
+  let user = await db(sql,userValue).then(res => { return res }).catch(e => {
     Utils.handleMessage(ctx, Tips[2000], e)
   });
-
+  let result = []
+  if (user.length == 0) {
+    result = await db(studentSql,studentValue).then(res => { return res }).catch(e => {
+      Utils.handleMessage(ctx, Tips[2000], e)
+    });
+  }else{
+    result = user
+  }
+  if (result && result.length > 0) {
+  let val = result[0];
+  // let userId = val['userId']
+  let tokenInfo = { userId:val['userId'],studentId:val['studentId'] }
+  console.log(tokenInfo)
+  let token = Utils.generateToken(tokenInfo);
+  Utils.handleMessage(ctx, {
+    ...Tips[1004], data: { token, ...val }
+  })
+  } else {
+    Utils.handleMessage(ctx, Tips[1100])
+  }
 });
 
 router.get('/api/menus', async (ctx, next) => {
-  let { userId } = ctx.state || {};
-  let sqlRole = 'SELECT roleId FROM user WHERE userId=' + userId
+  let { userId,studentId } = ctx.state || {};
+  let sqlRole = studentId?'SELECT roleId FROM student WHERE studentId=' + studentId:'SELECT roleId FROM user WHERE userId=' + userId
   let roleRes = await db(sqlRole).then(res => { return res })
   if (roleRes.length > 0) {
     let roleId = roleRes[0].roleId
