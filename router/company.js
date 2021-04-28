@@ -20,10 +20,10 @@ router.post('/api/company/add', async (ctx, next)=> {
   const data = ctx.request.body;
   let now = Utils.formatCurrentTime()
   let { userId } = ctx.state || {};
-  let {companyName, companyType,address,wageMax,wageMin,onlineType,onlineChannel, offlineAddress, contactName, mobile, payrollDate} = data
+  let {companyName, companyType,address,wageMax,wageMin,onlineType,onlineChannel, offlineAddress, contactName, mobile, payrollDate,isOrder} = data
   const sql = 'SELECT * FROM company WHERE isDelect=0 and companyName=' + JSON.stringify(data.companyName);
-  const sqlAdd = 'INSERT INTO company (companyName, companyType,address,wageMax,wageMin,onlineType,onlineChannel, offlineAddress, contactName, mobile, payrollDate, createTime, updateTime,isDelect,userId,description) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
-  const sqlData= [companyName, companyType,address,wageMax,wageMin,onlineType,onlineChannel||'', offlineAddress||'', contactName, mobile, payrollDate, now, now,0,userId,data.description||''];
+  const sqlAdd = 'INSERT INTO company (companyName, companyType,address,wageMax,wageMin,onlineType,onlineChannel, offlineAddress, contactName, mobile, payrollDate, createTime, updateTime,isDelect,userId,description,isOrder) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
+  const sqlData= [companyName, companyType,address,wageMax,wageMin,onlineType,onlineChannel||'', offlineAddress||'', contactName, mobile, payrollDate, now, now,0,userId,data.description||'',isOrder||'0'];
   let result = await db(sql).then(res => { return res})
   if (result.length == 0) {
     await db(sqlAdd, sqlData).then(() => {

@@ -7,7 +7,7 @@ router.get('/api/course/list', async (ctx, next) => {
   let { userId } = ctx.state || {};
   let data = Utils.filter(ctx.request.query, ['studentId', 'startTime', 'endTime', 'subjectId', 'companyId'])
   let { studentId, startTime, endTime, subjectId, companyId } = data
-  let sql = 'select course.studentId, course.courseId, course.subjectId, course.unitPrice, course.startTime, course.endTime, student.companyId FROM course inner join student on course.studentId = student.studentId where course.isDelect=0 and course.userId=' + userId
+  let sql = 'select course.studentId, course.courseId, course.subjectId,course.isAudition, course.unitPrice, course.startTime, course.endTime, student.companyId FROM course inner join student on course.studentId = student.studentId where course.isDelect=0 and course.userId=' + userId
   if (studentId) {
     sql += ' and course.studentId=' + studentId
   }
@@ -63,14 +63,18 @@ router.get('/api/course/student', async (ctx, next) => {
 
 router.get('/api/course/page', async (ctx, next) => {
   let { userId } = ctx.state || {};
-  let data = Utils.filter(ctx.request.query, ['pageSize', 'pageNum', 'studentId', 'startTime', 'endTime', 'companyId', 'subjectId'])
-  let { studentId, pageSize, pageNum, startTime, endTime, companyId, subjectId } = data
+  let data = Utils.filter(ctx.request.query, ['pageSize', 'pageNum', 'studentId', 'startTime', 'endTime', 'companyId', 'subjectId','isAudition'])
+  let { studentId, pageSize, pageNum, startTime, endTime, companyId, subjectId,isAudition } = data
   if (!pageSize || !pageNum) return ctx.body = Utils.handleMessage(ctx, Tips[2002])
-  let sql = 'select course.studentId, course.courseId, course.subjectId, course.unitPrice, course.startTime, course.endTime, student.companyId FROM course inner join student on course.studentId = student.studentId where course.isDelect=0 and course.userId=' + userId
+  let sql = 'select course.studentId, course.courseId, course.subjectId, course.unitPrice, course.startTime,course.isAudition, course.endTime, student.companyId FROM course inner join student on course.studentId = student.studentId where course.isDelect=0 and course.userId=' + userId
   let totalsql = 'select count(*) from course inner join student on course.studentId = student.studentId where course.isDelect=0 and course.userId=' + userId
   if (studentId) {
     sql += ' and course.studentId=' + studentId
     totalsql += ' and course.studentId=' + studentId
+  }
+  if (isAudition) {
+    sql += ' and course.isAudition=' + isAudition
+    totalsql += ' and course.isAudition=' + isAudition
   }
   if (startTime) {
     sql += " and course.startTime>='" + startTime + "'"
@@ -84,6 +88,7 @@ router.get('/api/course/page', async (ctx, next) => {
     sql += ' and student.companyId=' + companyId
     totalsql += ' and student.companyId=' + companyId
   }
+  
   if (subjectId) {
     sql += ' and course.subjectId=' + subjectId
     totalsql += ' and course.subjectId=' + subjectId
@@ -103,11 +108,11 @@ router.post('/api/course/add', async (ctx, next) => {
   const data = ctx.request.body;
   let now = Utils.formatCurrentTime()
   let { userId } = ctx.state || {};
-  let { studentId, subjectId, unitPrice, startTime, endTime } = data
+  let { studentId, subjectId, unitPrice, startTime, endTime,isAudition } = data
   const sql = "select * from course where isDelect=0 and not (startTime >='" + endTime + "' or endTime <='" + startTime + "');"
   // const sql = "select * from course where course.`isDelect`=0 and not (course.`startTime`>='"+ endTime +"' or course.`endTime`=<'"+ startTime +"')"
-  const sqlAdd = 'INSERT INTO course (studentId,subjectId, unitPrice,startTime,endTime,createTime, updateTime, userId, isDelect) VALUES (?,?,?,?,?,?,?,?,?)';
-  const sqlData = [studentId, subjectId, unitPrice, startTime, endTime, now, now, userId, '0'];
+  const sqlAdd = 'INSERT INTO course (studentId,subjectId, unitPrice,startTime,endTime,createTime, updateTime, userId, isDelect,isAudition) VALUES (?,?,?,?,?,?,?,?,?,?)';
+  const sqlData = [studentId, subjectId, unitPrice, startTime, endTime, now, now, userId, '0',isAudition];
   let result = await db(sql).then(res => { return res })
   if (result.length == 0) {
     await db(sqlAdd, sqlData).then(() => {
@@ -152,8 +157,8 @@ router.get('/api/course/download', async (ctx, next) => {
 
   let { userId } = ctx.state || {};
   let data = Utils.filter(ctx.request.query, ['studentId', 'startTime', 'endTime', 'subjectId', 'companyId'])
-  let { studentId, startTime, endTime, subjectId, companyId } = data
-  let sql = 'select student.studentName, course.subjectId, course.unitPrice, course.startTime, course.endTime, student.companyId FROM course inner join student on course.studentId = student.studentId  where course.isDelect=0 and course.userId=' + userId
+  let { studentId, startTime, endTime, subjectId, companyId, isAudition } = data
+  let sql = 'select student.studentName, course.subjectId, course.unitPrice, course.startTime, course.isAudition, course.endTime, student.companyId FROM course inner join student on course.studentId = student.studentId  where course.isDelect=0 and course.userId=' + userId
   if (studentId) {
     sql += ' and course.studentId=' + studentId
   }
@@ -168,6 +173,9 @@ router.get('/api/course/download', async (ctx, next) => {
   }
   if (subjectId) {
     sql += ' and course.subjectId=' + subjectId
+  }
+  if (isAudition) {
+    sql += ' and course.isAudition=' + isAudition
   }
   let company = 'SELECT * FROM company WHERE isDelect=0 and userId=' + userId;
   let subject = 'SELECT * FROM subject WHERE isDelect=0';
@@ -185,7 +193,7 @@ router.get('/api/course/download', async (ctx, next) => {
 
   let courseData = await db(sql).then(res => { return res })
   let conf = {};
-  conf.name = "total";
+  conf.name = "Course";
   let alldata = new Array();
   let dealData = courseData.map((item, i) => {
     return {
@@ -193,6 +201,7 @@ router.get('/api/course/download', async (ctx, next) => {
       studentName: item.studentName,
       companyName: companyObj[item.companyId],
       subjectName: subjectObj[item.subjectId],
+      isAudition: item.isAudition==='1'?'是':'否',
       startTime: Utils.myMoment(item.startTime).formate('YYYY-MM-DD HH:mm'),
       endTime: Utils.myMoment(item.endTime).formate('YYYY-MM-DD HH:mm'),
       timeLong: Utils.getMinutes(item.startTime, item.endTime),
@@ -200,7 +209,7 @@ router.get('/api/course/download', async (ctx, next) => {
     }
   })
   for (const item of dealData) {
-    alldata.push([item.index, item.studentName, item.companyName, item.subjectName, item.startTime, item.endTime, item.timeLong, item.unitPrice])
+    alldata.push([item.index, item.studentName, item.companyName, item.subjectName, item.isAudition, item.startTime, item.endTime, item.timeLong, item.unitPrice])
   }
   //决定列名和类型
   conf.cols = [
@@ -208,13 +217,14 @@ router.get('/api/course/download', async (ctx, next) => {
     { caption: '学生姓名', type: 'string', width: 12 },
     { caption: '所在机构', type: 'string', width: 12 },
     { caption: '科目', type: 'string', width: 12 },
+    { caption: '是否试听', type: 'string', width: 12 },
     { caption: '上课时间', type: 'string', width: 18 },
     { caption: '下课时间', type: 'string', width: 18 },
     { caption: '课程时长(分钟)', type: 'number', width: 20 },
     { caption: '课时费', type: 'number', width: 20 }
   ];
   conf.rows = alldata;
-  let name = `total(${Utils.myMoment(startTime).formate('YYYY-MM-DD')}-${Utils.myMoment(endTime).formate('YYYY-MM-DD')})`
+  let name = `${encodeURIComponent('课程管理导出文件')}(${Utils.myMoment(startTime).formate('YYYY-MM-DD')}-${Utils.myMoment(endTime).formate('YYYY-MM-DD')})`
   await Utils.exportdata(conf, ctx, name);
 })
 
