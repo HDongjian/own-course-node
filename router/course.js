@@ -5,9 +5,9 @@ const db = require('../db');
 
 router.get('/api/course/list', async (ctx, next) => {
   let { userId } = ctx.state || {};
-  let data = Utils.filter(ctx.request.query, ['studentId', 'startTime', 'endTime', 'subjectId', 'companyId'])
-  let { studentId, startTime, endTime, subjectId, companyId } = data
-  let sql = 'select course.studentId, course.courseId, course.subjectId,course.isAudition, course.unitPrice, course.startTime, course.endTime, student.companyId FROM course inner join student on course.studentId = student.studentId where course.isDelect=0 and course.userId=' + userId
+  let data = Utils.filter(ctx.request.query, ['studentId', 'startTime', 'endTime', 'subjectId', 'companyId','orderId'])
+  let { studentId, startTime, endTime, subjectId, companyId,orderId } = data
+  let sql = 'select course.studentId, course.courseId, course.subjectId,course.isAudition,course.orderId, course.unitPrice, course.startTime, course.endTime, student.companyId FROM course inner join student on course.studentId = student.studentId where course.isDelect=0 and course.userId=' + userId
   if (studentId) {
     sql += ' and course.studentId=' + studentId
   }
@@ -22,6 +22,9 @@ router.get('/api/course/list', async (ctx, next) => {
   }
   if (subjectId) {
     sql += ' and course.subjectId=' + subjectId
+  }
+  if (orderId) {
+    sql += ' and course.orderId=' + orderId
   }
   await db(sql).then(res => {
     Utils.handleMessage(ctx, {
@@ -108,11 +111,11 @@ router.post('/api/course/add', async (ctx, next) => {
   const data = ctx.request.body;
   let now = Utils.formatCurrentTime()
   let { userId } = ctx.state || {};
-  let { studentId, subjectId, unitPrice, startTime, endTime,isAudition } = data
+  let { studentId, subjectId, unitPrice, startTime, endTime,isAudition,orderId } = data
   const sql = "select * from course where isDelect=0 and not (startTime >='" + endTime + "' or endTime <='" + startTime + "');"
   // const sql = "select * from course where course.`isDelect`=0 and not (course.`startTime`>='"+ endTime +"' or course.`endTime`=<'"+ startTime +"')"
-  const sqlAdd = 'INSERT INTO course (studentId,subjectId, unitPrice,startTime,endTime,createTime, updateTime, userId, isDelect,isAudition) VALUES (?,?,?,?,?,?,?,?,?,?)';
-  const sqlData = [studentId, subjectId, unitPrice, startTime, endTime, now, now, userId, '0',isAudition];
+  const sqlAdd = 'INSERT INTO course (studentId,subjectId, unitPrice,startTime,endTime,createTime, updateTime, userId, isDelect,isAudition,orderId) VALUES (?,?,?,?,?,?,?,?,?,?,?)';
+  const sqlData = [studentId, subjectId, unitPrice, startTime, endTime, now, now, userId, '0',isAudition,orderId];
   let result = await db(sql).then(res => { return res })
   if (result.length == 0) {
     await db(sqlAdd, sqlData).then(() => {

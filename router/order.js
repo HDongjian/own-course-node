@@ -25,7 +25,7 @@ router.get('/api/order/list', async (ctx, next) => {
 
 router.get('/api/order/page', async (ctx, next) => {
   let { userId } = ctx.state || {};
-  let data = Utils.filter(ctx.request.query, ['pageSize', 'pageNum', 'orderStartDate', 'orderStartDate', 'orderEndDate', 'orderType', 'orderType'])
+  let data = Utils.filter(ctx.request.query, ['pageSize', 'pageNum', 'studentId','orderStartDate', 'orderStartDate', 'orderEndDate', 'orderType', 'orderType'])
   let { studentId, pageSize, pageNum, orderStartDate,orderEndDate,orderType, orderNumber } = data
   let sql = 'SELECT * FROM orders WHERE isDelect=0 and userId=' + userId;
   let totalsql = 'SELECT count(*) from orders where isDelect=0 and userId=' + userId;
@@ -36,6 +36,10 @@ router.get('/api/order/page', async (ctx, next) => {
   if (orderType) {
     sql += ' and orderType=' + orderType
     totalsql += ' and orderType=' + orderType
+  }
+  if (studentId) {
+    sql += ' and studentId=' + studentId
+    totalsql += ' and studentId=' + studentId
   }
   if (orderNumber) {
     sql += ' and orderNumber=' + orderNumber
@@ -62,10 +66,10 @@ router.post('/api/order/add', async (ctx, next) => {
   const data = ctx.request.body;
   let now = Utils.formatCurrentTime()
   let { userId } = ctx.state || {};
-  let { studentId, classCount, orderDate, orderAmount , orderNumber='', orderType, description = '' } = data
+  let { studentId, classCount, classMinute = 60, orderDate, orderAmount , orderNumber='', orderType, description = '' } = data
   // const sql = 'SELECT * FROM orders WHERE isDelect=0 and studentId=' + JSON.stringify(data.studentId);
-  const sqlAdd = 'INSERT INTO orders (studentId, classCount,orderDate,orderAmount,orderNumber,orderType,description, createTime, updateTime,isDelect,userId) VALUES (?,?,?,?,?,?,?,?,?,?,?)';
-  const sqlData = [studentId, classCount, orderDate, orderAmount, orderNumber, orderType, description, now, now, 0, userId];
+  const sqlAdd = 'INSERT INTO orders (studentId, classCount,classMinute,orderDate,orderAmount,orderNumber,orderType,description, createTime, updateTime,isDelect,userId) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)';
+  const sqlData = [studentId, classCount,classMinute, orderDate, orderAmount, orderNumber, orderType, description, now, now, 0, userId];
   console.log(sqlData)
   // let result = await db(sql).then(res => { return res })
   await db(sqlAdd, sqlData).then(() => {
