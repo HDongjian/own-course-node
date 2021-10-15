@@ -16,7 +16,10 @@ let util = {
     if (!IS.array(valids)) return false
     for (let i = 0; i < valids.length; i++) {
       let e = valids[i]
-      let { key, type } = e
+      let {
+        key,
+        type
+      } = e
       if (!key) {
         res = false
         break
@@ -151,13 +154,13 @@ let util = {
   generateToken(data) {
     let created = Math.floor(Date.now() / 1000)
     let cert = fs.readFileSync(path.join(__dirname, '../pem/pri.pem'))
-    let token = jwt.sign(
-      {
+    let token = jwt.sign({
         data,
         exp: created + 3600 * 24,
       },
-      cert,
-      { algorithm: 'RS256' }
+      cert, {
+        algorithm: 'RS256'
+      }
     )
     return token
   },
@@ -165,9 +168,13 @@ let util = {
     let cert = fs.readFileSync(path.join(__dirname, '../pem/pub.pem')),
       res = {}
     try {
-      let result = jwt.verify(token, cert, { algorithms: ['RS256'] }) || {}
-      let { exp = 0 } = result,
-        current = Math.floor(Date.now() / 1000)
+      let result = jwt.verify(token, cert, {
+        algorithms: ['RS256']
+      }) || {}
+      let {
+        exp = 0
+      } = result,
+      current = Math.floor(Date.now() / 1000)
       if (current <= exp) {
         res = result.data || {}
       }
@@ -207,7 +214,8 @@ let util = {
     if (url.indexOf('?') >= 0) {
       let paramUrl = url.replace(/.*\?/, '')
       for (const param of paramUrl.split('&')) {
-        ;/(.*)(=)(.*)/.test(param)
+        ;
+        /(.*)(=)(.*)/.test(param)
         params[RegExp.$1] = RegExp.$3
       }
     }
@@ -244,6 +252,72 @@ let util = {
     )
     ctx.body = data
   },
+  async getAllCompany(userId, db, isMap) {
+    let sql = `SELECT * FROM company WHERE isDelect=0 and userId= ${userId}`
+
+    return db(sql).then((res) => {
+      if (isMap) {
+        let result = {}
+        for (const item of res) {
+          result[item.companyId] = item.companyName
+        }
+        return result
+      } else {
+        return res
+      }
+    }).catch((e) => {
+      return isMap ? {} : []
+    })
+  },
+  async getAllSubject(userId, db, isMap) {
+    let sql = `SELECT * FROM subject WHERE isDelect=0`
+
+    return db(sql).then((res) => {
+      if (isMap) {
+        let result = {}
+        for (const item of res) {
+          result[item.subjectId] = item.subjectName
+        }
+        return result
+      } else {
+        return res
+      }
+    }).catch((e) => {
+      console.log(e)
+      return isMap ? {} : []
+    })
+  },
+  async getSurplusCount(db, studentId) {
+    let orderSql = `SELECT * FROM orders WHERE isDelect=0 and studentId=${studentId}`
+    let course = await this.getCourser(db, studentId);
+    let courseHour = this.countCouseTotal(course)
+    return db(orderSql).then(res => {
+      let orderHour = 0
+      for (const item of res) {
+        let hh = item.classMinute * item.classCount / 60
+        orderHour += Number(hh)
+      }
+      return {
+        orderHour,
+        courseHour,
+        surplusHour: orderHour - courseHour>0?orderHour - courseHour:0
+      }
+    })
+  },
+  async getCourser(db, studentId, orderId) {
+    let courserSql = `SELECT * FROM course WHERE isDelect=0${(studentId||orderId)?' and':''}${studentId?` studentId=${studentId}`:''}${orderId?` orderId=${orderId}`:''}`
+    return db(courserSql).then(res => {
+      return res
+    })
+  },
+  countCouseTotal(course){
+    let courseHour = 0
+    for (const item of course) {
+      let second = new Date(item.endTime).getTime() - new Date(item.startTime).getTime()
+      courseHour += (second / 1000 / 60 / 60)
+    }
+    return courseHour
+  }
 }
 
 module.exports = util

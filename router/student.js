@@ -4,10 +4,15 @@ const Tips = require('../utils/tip');
 const db = require('../db');
 
 router.get('/api/student/list', async (ctx, next) => {
-  let { userId } = ctx.state || {};
+  let {
+    userId
+  } = ctx.state || {};
   let data = Utils.filter(ctx.request.query, ['status', 'companyId'])
-  let { status, companyId } = data
-  let sql = 'SELECT * FROM student WHERE isDelect=0 and userId=' + userId + ' order by updateTime desc';
+  let {
+    status,
+    companyId
+  } = data
+  let sql = 'SELECT * FROM student WHERE isDelect=0 and userId=' + userId + ' order by createTime desc';
   if (companyId) {
     sql += ' and companyId=' + companyId
   }
@@ -16,7 +21,8 @@ router.get('/api/student/list', async (ctx, next) => {
   }
   await db(sql).then(res => {
     Utils.handleMessage(ctx, {
-      ...Tips[1000], data: res
+      ...Tips[1000],
+      data: res
     })
   }).catch(e => {
     Utils.handleMessage(ctx, Tips[2000], e)
@@ -24,11 +30,26 @@ router.get('/api/student/list', async (ctx, next) => {
 })
 
 router.get('/api/student/page', async (ctx, next) => {
-  let { userId } = ctx.state || {};
-  let data = Utils.filter(ctx.request.query, ['pageSize', 'pageNum', 'studentId', 'startTime', 'endTime', 'companyId', 'status'])
-  let { studentId, pageSize, pageNum, startTime, endTime, companyId, status } = data
+  let {
+    userId
+  } = ctx.state || {};
+  let data = Utils.filter(ctx.request.query, ['pageSize', 'pageNum', 'studentId', 'studentName', 'startTime', 'endTime', 'companyId', 'status'])
+  let {
+    studentId,
+    pageSize,
+    pageNum,
+    startTime,
+    endTime,
+    companyId,
+    status,
+    studentName
+  } = data
   let sql = 'SELECT * FROM student WHERE isDelect=0 and userId=' + userId;
   let totalsql = 'select count(*) from student where isDelect=0 and userId=' + userId;
+  if (studentName) {
+    sql += ` and studentName like '%${studentName}%'`
+    totalsql += ` and studentName like '%${studentName}%'`
+  }
 
   if (studentId) {
     sql += ' and studentId=' + studentId
@@ -43,10 +64,30 @@ router.get('/api/student/page', async (ctx, next) => {
     totalsql += ' and status=' + status
   }
   sql += ' order by updateTime desc limit ' + (pageNum - 1) * pageSize + ',' + pageSize
-  let total = await db(totalsql).then(res => { return res })
-  await db(sql).then(res => {
+  let total = await db(totalsql).then(res => {
+    return res
+  })
+  let companys = await Utils.getAllCompany(userId, db, true)
+  let subjects = await Utils.getAllSubject(userId, db, true)
+  await db(sql).then(async res => {
+    let data = []
+    for (const item of res) {
+      let surplus = await Utils.getSurplusCount(db,item.studentId)
+      data.push({
+        ...item,
+        ...surplus,
+        subjectNames: (item.subjectIds.split(',').map(sub => subjects[sub])).join(','),
+        companyName: companys[item.companyId],
+      })
+    }
     Utils.handleMessage(ctx, {
-      ...Tips[1000], data: { data: res, total: total[0] ? total[0]['count(*)'] : 0, pageNum: Number(pageNum), pageSize: Number(pageSize) }
+      ...Tips[1000],
+      data: {
+        data,
+        total: total[0] ? total[0]['count(*)'] : 0,
+        pageNum: Number(pageNum),
+        pageSize: Number(pageSize)
+      }
     })
   }).catch(e => {
     Utils.handleMessage(ctx, Tips[2000], e)
@@ -56,12 +97,25 @@ router.get('/api/student/page', async (ctx, next) => {
 router.post('/api/student/add', async (ctx, next) => {
   const data = ctx.request.body;
   let now = Utils.formatCurrentTime()
-  let { userId } = ctx.state || {};
-  let { studentName, subjectIds, companyId, targetScore = '', currentScore = '', gradeList = '', perHourPay, description = '' } = data
+  let {
+    userId
+  } = ctx.state || {};
+  let {
+    studentName,
+    subjectIds,
+    companyId,
+    targetScore = '',
+    currentScore = '',
+    gradeList = '',
+    perHourPay,
+    description = ''
+  } = data
   const sql = 'SELECT * FROM student WHERE isDelect=0 and studentName=' + JSON.stringify(data.studentName);
   const sqlAdd = 'INSERT INTO student (studentName, subjectIds,companyId,targetScore,currentScore,gradeList,perHourPay, createTime, updateTime,isDelect,userId,description,status,password,roleId) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
-  const sqlData = [studentName, subjectIds, companyId, targetScore, currentScore, gradeList, perHourPay, now, now, 0, userId, description, '1','e10adc3949ba59abbe56e057f20f883e',3];
-  let result = await db(sql).then(res => { return res })
+  const sqlData = [studentName, subjectIds, companyId, targetScore, currentScore, gradeList, perHourPay, now, now, 0, userId, description, '1', 'e10adc3949ba59abbe56e057f20f883e', 3];
+  let result = await db(sql).then(res => {
+    return res
+  })
   if (result.length == 0) {
     await db(sqlAdd, sqlData).then(() => {
       Utils.handleMessage(ctx, Tips[1001])
@@ -85,7 +139,9 @@ router.post('/api/student/update/:id', async (ctx, next) => {
 router.post('/api/student/delect/:id', async (ctx, next) => {
   let id = ctx.request.url.replace('/api/student/delect/', '')
   let sql__ = "SELECT * FROM course WHERE isDelect=0 and studentId =" + id
-  let result_ = await db(sql__).then(res => { return res })
+  let result_ = await db(sql__).then(res => {
+    return res
+  })
   if (result_.length > 0) {
     return Utils.handleMessage(ctx, {
       code: 300,
